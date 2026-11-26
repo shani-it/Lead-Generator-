@@ -1,0 +1,4 @@
+# The site's base directory is `frontend`, so all paths here are relative to it.
+# The site is plain static HTML — no build step is needed.
+[build]
+  publish = "."
