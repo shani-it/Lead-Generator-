@@ -620,7 +620,7 @@ Can I send over our rate card for upcoming projects?</textarea>
             document.getElementById("resultsBox").classList.add("hidden");
 
             try {
-                const res = await fetch(`http://127.0.0.1:8000/scrape?query=${encodeURIComponent(fullQuery)}&skip=${currentSkip}`);
+                const res = await fetch(`https://localleadpro-api.onrender.com/scrape?query=${encodeURIComponent(fullQuery)}&skip=${currentSkip}`);
                 const data = await res.json();
 
                 if (data.leads.length === 0) {
