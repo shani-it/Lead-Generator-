@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - LocalLeadPro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-4 sm:p-8">
+
+    <!-- Admin PIN Lock -->
+    <div id="pinScreen" class="max-w-sm mx-auto mt-20 bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center">
+        <h1 class="text-xl font-bold text-emerald-400">🔐 Admin Control Panel</h1>
+        <p class="text-xs text-slate-400 mt-1 mb-4">Enter Admin PIN to manage client credits</p>
+        <input id="adminPin" type="password" placeholder="Enter PIN" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-center mb-3 focus:border-emerald-500 focus:outline-none">
+        <button onclick="unlockAdmin()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 rounded-lg text-sm">Unlock Panel</button>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminPanel" class="hidden max-w-6xl mx-auto">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-emerald-400">⚡ Client Credit Management</h1>
+                <p class="text-xs text-slate-400">Activate $50, $80, or $100 packages for registered clients</p>
+            </div>
+            <button onclick="loadUsers()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">🔄 Refresh List</button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[780px]">
+                <thead>
+                    <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950">
+                        <th class="p-4">Client Name</th>
+                        <th class="p-4">Email</th>
+                        <th class="p-4">Current Plan</th>
+                        <th class="p-4">Credits</th>
+                        <th class="p-4">Manage Package</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable" class="divide-y divide-slate-800 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_PIN = "admin1234";
+        const db = window.supabase.createClient(
+            "https://yeidapjzwryprqeflylw.supabase.co",
+            "sb_publishable_xp3Kf16LBYnNLhQ0bL3zQg_50JxejEu"
+        );
+
+        function unlockAdmin() {
+            if (document.getElementById('adminPin').value === ADMIN_PIN) {
+                document.getElementById('pinScreen').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                loadUsers();
+            } else {
+                alert("Wrong PIN!");
+            }
+        }
+
+        async function loadUsers() {
+            const { data, error } = await db.from('app_users').select('*').order('created_at', { ascending: false });
+            const tbody = document.getElementById('usersTable');
+            tbody.innerHTML = "";
+
+            if (error || !data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500">No registered users yet.</td></tr>`;
+                return;
+            }
+
+            data.forEach(u => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40">
+                        <td class="p-4 font-medium">${u.full_name || "-"}</td>
+                        <td class="p-4 text-slate-300">${u.email}</td>
+                        <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${u.is_paid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}">${u.plan}</span></td>
+                        <td class="p-4 font-bold text-white">${u.credits}</td>
+                        <td class="p-4 flex flex-wrap gap-2">
+                            <button onclick="addPackage('${u.email}', ${u.credits}, 'STARTER ($50)', 300)" class="bg-slate-800 hover:bg-emerald-600 text-xs px-3 py-1.5 rounded-md font-semibold">+300 ($50)</button>
+                            <button onclick="addPackage('${u.email}', ${u.credits}, 'GROWTH ($80)', 700)" class="bg-slate-800 hover:bg-emerald-600 text-xs px-3 py-1.5 rounded-md font-semibold">+700 ($80)</button>
+                            <button onclick="addPackage('${u.email}', ${u.credits}, 'PRO ($100)', 1000)" class="bg-slate-800 hover:bg-emerald-600 text-xs px-3 py-1.5 rounded-md font-semibold">+1000 ($100)</button>
+                            <button onclick="cancelPlan('${u.email}')" class="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs px-3 py-1.5 rounded-md font-semibold">Cancel Plan</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function addPackage(email, currentCredits, planName, addCredits) {
+            if (!confirm(`Add ${addCredits} credits (${planName}) to ${email}?`)) return;
+            await db.from('app_users').update({
+                credits: currentCredits + addCredits,
+                plan: planName,
+                is_paid: true
+            }).eq('email', email);
+            loadUsers();
+        }
+
+        async function cancelPlan(email) {
+            if (!confirm(`Cancel plan for ${email}? This will reset their plan to FREE TRIAL (0 credits) and lock Excel downloads.`)) return;
+            await db.from('app_users').update({
+                credits: 0,
+                plan: 'FREE TRIAL',
+                is_paid: false
+            }).eq('email', email);
+            loadUsers();
+        }
+    </script>
+</body>
+</html>

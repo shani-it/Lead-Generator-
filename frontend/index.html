@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalLeadPro - B2B Lead Engine & Outreach</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased">
+
+    <!-- Mobile Backdrop -->
+    <div id="mobileBackdrop" onclick="toggleMobileMenu()" class="hidden fixed inset-0 bg-black/70 z-30 lg:hidden"></div>
+
+    <div class="flex min-h-screen">
+        <!-- ==================== CLEAN SIDEBAR ==================== -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-950 border-r border-slate-800 p-5 flex flex-col justify-between transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 ease-in-out">
+            <div>
+                <div class="flex items-center justify-between mb-8">
+                    <h1 class="text-2xl font-bold text-emerald-400">⚡ LocalLeadPro</h1>
+                    <button onclick="toggleMobileMenu()" class="lg:hidden text-slate-400 hover:text-white text-xl">✕</button>
+                </div>
+
+                <nav class="space-y-2">
+                    <a href="#" onclick="closeMobileMenu()" class="block px-4 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 font-medium">🔍 Lead Finder</a>
+                    <a href="#" onclick="closeMobileMenu(); openModal('emailModal')" class="block px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition">📧 Email Template</a>
+                    <a href="#" onclick="closeMobileMenu(); openModal('pricingModal')" class="block px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition">📦 Packages</a>
+                </nav>
+            </div>
+
+            <!-- Credits Card -->
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400">Plan: <strong id="planBadge" class="text-emerald-400">FREE TRIAL</strong></span>
+                    <button onclick="openModal('pricingModal')" class="text-xs text-blue-400 hover:underline font-medium">Upgrade</button>
+                </div>
+                <p class="text-sm font-semibold mt-2">Credits: <span id="creditsCount" class="text-xl text-white">40</span></p>
+            </div>
+        </aside>
+
+        <!-- ==================== MAIN AREA ==================== -->
+        <div class="flex-1 flex flex-col min-w-0">
+            
+            <!-- TOP NAVIGATION BAR -->
+            <header class="bg-slate-950/90 backdrop-blur border-b border-slate-800 px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-20">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleMobileMenu()" class="lg:hidden p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white">
+                        ☰
+                    </button>
+                    <span class="lg:hidden font-bold text-emerald-400 text-lg">⚡ LocalLeadPro</span>
+                    <span class="hidden lg:inline-block text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full">
+                        B2B Client Discovery & Outreach
+                    </span>
+                </div>
+
+                <!-- Right Side: Login & Sign Up Buttons -->
+                <div id="guestTopNav" class="flex items-center gap-2.5">
+                    <button onclick="openAuthModal('login')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition">
+                        Login
+                    </button>
+                    <button onclick="openAuthModal('signup')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow transition">
+                        Sign Up
+                    </button>
+                </div>
+
+                <!-- Right Side: Logged-In User Pill -->
+                <div id="loggedTopNav" class="hidden flex items-center gap-3">
+                    <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <span id="userEmailDisplay" class="text-xs font-medium text-slate-200 max-w-[120px] sm:max-w-[200px] truncate">user@email.com</span>
+                    </div>
+                    <button onclick="logout()" class="text-xs font-medium text-red-400 hover:text-red-300 px-2 py-1">
+                        Logout
+                    </button>
+                </div>
+            </header>
+
+            <!-- MAIN CONTENT BODY -->
+            <main class="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-white">B2B Lead Engine</h2>
+                        <p class="text-slate-400 text-xs sm:text-sm mt-1">Discover high-intent local businesses, connect directly with decision-makers, and turn outreach into paying clients.</p>
+                    </div>
+                    <button onclick="exportToExcel()" class="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-lg transition">
+                        📥 Download Excel / Sheet
+                    </button>
+                </div>
+
+                <!-- Search Controls -->
+                <div class="bg-slate-950 p-4 sm:p-6 rounded-xl border border-slate-800 mb-6 sm:mb-8">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Market Region</label>
+                            <select id="region" onchange="updatePlaceholder()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+                                <option value="USA">🇺🇸 United States</option>
+                                <option value="UK">🇬🇧 United Kingdom</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Target Industry</label>
+                            <select id="category" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+                                <optgroup label="Real Estate & Property">
+                                    <option value="Property Management Companies">Property Management Companies</option>
+                                    <option value="Real Estate Agencies">Real Estate Agencies</option>
+                                    <option value="Commercial Real Estate Brokers">Commercial Real Estate Brokers</option>
+                                    <option value="HOA & Condo Associations">HOA & Condo Associations</option>
+                                    <option value="Apartment Complexes">Apartment Complexes</option>
+                                    <option value="Hotels & Motels">Hotels & Motels</option>
+                                </optgroup>
+                                <optgroup label="Construction & Home Trades">
+                                    <option value="General Contractors & Builders">General Contractors & Builders</option>
+                                    <option value="Roofing Contractors">Roofing Contractors</option>
+                                    <option value="Plumbing Companies">Plumbing Companies</option>
+                                    <option value="HVAC & Air Conditioning">HVAC & Air Conditioning</option>
+                                    <option value="Electrical Contractors">Electrical Contractors</option>
+                                    <option value="Landscaping & Lawn Care">Landscaping & Lawn Care</option>
+                                    <option value="Commercial Cleaning Services">Commercial Cleaning Services</option>
+                                    <option value="Solar Energy Installers">Solar Energy Installers</option>
+                                    <option value="Remodeling & Renovation">Remodeling & Renovation</option>
+                                </optgroup>
+                                <optgroup label="Medical & Healthcare">
+                                    <option value="Dental Clinics">Dental Clinics</option>
+                                    <option value="Chiropractors">Chiropractors</option>
+                                    <option value="Med Spas & Aesthetics">Med Spas & Aesthetics</option>
+                                    <option value="Physical Therapy Clinics">Physical Therapy Clinics</option>
+                                    <option value="Veterinary Clinics">Veterinary Clinics</option>
+                                    <option value="Urgent Care & Medical Centers">Urgent Care & Medical Centers</option>
+                                </optgroup>
+                                <optgroup label="Hospitality, Retail & Auto">
+                                    <option value="Restaurants & Cafes">Restaurants & Cafes</option>
+                                    <option value="Auto Repair & Mechanics">Auto Repair & Mechanics</option>
+                                    <option value="Car Dealerships">Car Dealerships</option>
+                                    <option value="Gyms & Fitness Studios">Gyms & Fitness Studios</option>
+                                    <option value="Beauty Salons & Barbershops">Beauty Salons & Barbershops</option>
+                                    <option value="Retail Stores & Boutiques">Retail Stores & Boutiques</option>
+                                </optgroup>
+                                <optgroup label="Corporate, Legal & Industrial">
+                                    <option value="Commercial Facilities">Commercial Facilities</option>
+                                    <option value="Law Firms & Attorneys">Law Firms & Attorneys</option>
+                                    <option value="Accounting & CPA Firms">Accounting & CPA Firms</option>
+                                    <option value="Insurance Agencies">Insurance Agencies</option>
+                                    <option value="Warehouses & Logistics">Warehouses & Logistics</option>
+                                    <option value="Manufacturing Companies">Manufacturing Companies</option>
+                                    <option value="IT & Managed Service Providers">IT & Managed Service Providers</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">City, State or Postcode</label>
+                            <input id="location" type="text" value="" placeholder="Enter city or postcode..."
+                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="searchLeads(false)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 px-4 rounded-lg transition">
+                                🚀 Find Leads
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LOADING SCREEN -->
+                <div id="loadingBox" class="hidden bg-slate-950 border border-emerald-500/30 rounded-xl p-8 sm:p-12 text-center mb-8">
+                    <div class="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <h3 class="text-lg sm:text-xl font-bold text-emerald-400">Loading... Please wait, your leads are producing...</h3>
+                    <p class="text-slate-400 text-xs sm:text-sm mt-2">Scanning local listings and verifying business emails in the background. This takes 15–25 seconds.</p>
+                </div>
+
+                <!-- Results Table -->
+                <div id="resultsBox" class="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden">
+                    <div class="p-4 border-b border-slate-800 flex flex-wrap justify-between items-center gap-2">
+                        <h3 class="font-semibold text-sm sm:text-base" id="resultsTitle">Extracted Leads</h3>
+                        <div class="flex gap-2">
+                            <span class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full" id="totalBadge">0 Total</span>
+                            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full" id="emailBadge">0 With Email</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[650px]">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-900/50">
+                                    <th class="p-3 sm:p-4">#</th>
+                                    <th class="p-3 sm:p-4">Business Name</th>
+                                    <th class="p-3 sm:p-4">Phone Number</th>
+                                    <th class="p-3 sm:p-4">Verified Email</th>
+                                    <th class="p-3 sm:p-4">Website</th>
+                                    <th class="p-3 sm:p-4">Outreach</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTable" class="divide-y divide-slate-800 text-xs sm:text-sm"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Load Next 20 Fresh Leads Button -->
+                    <div id="loadMoreBox" class="hidden p-4 bg-slate-900/50 border-t border-slate-800 text-center">
+                        <button onclick="searchLeads(true)" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 border border-emerald-500/40 text-emerald-400 font-semibold px-6 py-2.5 rounded-lg text-sm transition">
+                            ⏭️ Load Next 20 Fresh Leads
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ==================== LOGIN / SIGNUP MODAL ==================== -->
+    <div id="authModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
+            <button onclick="closeModal('authModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold px-2">✕</button>
+            
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-emerald-400">⚡ LocalLeadPro</h1>
+                <p class="text-slate-400 text-xs mt-1">Sign in to manage your account and credit packages</p>
+            </div>
+
+            <div class="flex bg-slate-950 p-1 rounded-lg mb-6 border border-slate-800">
+                <button type="button" id="loginTab" onclick="switchAuth('login')" class="w-1/2 py-2 rounded-md bg-emerald-500 text-slate-950 font-bold text-sm">Login</button>
+                <button type="button" id="signupTab" onclick="switchAuth('signup')" class="w-1/2 py-2 rounded-md text-slate-400 font-medium text-sm">Sign Up</button>
+            </div>
+
+            <form onsubmit="handleAuth(event)" class="space-y-4">
+                <div id="nameField" class="hidden">
+                    <label class="block text-xs text-slate-400 mb-1">Full Name / Company</label>
+                    <input id="authName" type="text" placeholder="Apex Services LLC" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Email Address</label>
+                    <input id="authEmail" type="email" required placeholder="you@company.com" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Password</label>
+                    <input id="authPassword" type="password" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+                </div>
+                <div id="confirmPassField" class="hidden">
+                    <label class="block text-xs text-slate-400 mb-1">Confirm Password</label>
+                    <input id="authConfirmPassword" type="password" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+                </div>
+                <p id="authError" class="hidden text-xs text-red-400 font-medium"></p>
+                <button type="submit" id="authBtn" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 rounded-lg transition">
+                    Login to Account
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== PACKAGES & DIRECT CONTACT MODAL ==================== -->
+    <div id="pricingModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl max-w-4xl w-full p-5 sm:p-8 my-8 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start gap-3 mb-6">
+                <div>
+                    <h3 class="text-xl sm:text-2xl font-bold text-white">Choose Your Growth Package</h3>
+                    <p class="text-slate-400 text-xs sm:text-sm mt-1">Fuel your client outreach with instant lead credits that never expire.</p>
+                </div>
+                <button onclick="closeModal('pricingModal')" class="text-slate-400 hover:text-white text-xl font-bold px-2">✕</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+                <!-- Package 1 -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs uppercase font-bold text-slate-400">Starter Package</span>
+                        <h4 class="text-3xl font-bold text-white mt-2">$50</h4>
+                        <p class="text-emerald-400 font-semibold text-sm mt-1">300 Credits</p>
+                        <ul class="text-xs text-slate-300 space-y-2.5 mt-4">
+                            <li>✔ Verified Business Leads & Emails</li>
+                            <li>✔ Excel & Google Sheets Download</li>
+                            <li>✔ 1-Click Direct Email Outreach</li>
+                            <li>✔ Credits Never Expire</li>
+                        </ul>
+                    </div>
+                    <button onclick="selectPackage('Starter Package ($50 - 300 Credits)')" class="mt-6 w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-lg text-sm transition">
+                        Select Package
+                    </button>
+                </div>
+
+                <!-- Package 2 -->
+                <div class="bg-slate-900 border-2 border-emerald-500 rounded-xl p-5 sm:p-6 flex flex-col justify-between relative">
+                    <span class="absolute -top-3 right-4 bg-emerald-500 text-slate-950 text-[10px] font-bold px-2.5 py-0.5 rounded-full">MOST POPULAR</span>
+                    <div>
+                        <span class="text-xs uppercase font-bold text-emerald-400">Growth Package</span>
+                        <h4 class="text-3xl font-bold text-white mt-2">$80</h4>
+                        <p class="text-emerald-400 font-semibold text-sm mt-1">700 Credits</p>
+                        <ul class="text-xs text-slate-300 space-y-2.5 mt-4">
+                            <li>✔ Verified Business Leads & Emails</li>
+                            <li>✔ Excel & Google Sheets Download</li>
+                            <li>✔ 1-Click Direct Email Outreach</li>
+                            <li>✔ Credits Never Expire</li>
+                        </ul>
+                    </div>
+                    <button onclick="selectPackage('Growth Package ($80 - 700 Credits)')" class="mt-6 w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
+                        Select Package
+                    </button>
+                </div>
+
+                <!-- Package 3 -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs uppercase font-bold text-slate-400">Pro Agency Package</span>
+                        <h4 class="text-3xl font-bold text-white mt-2">$100</h4>
+                        <p class="text-emerald-400 font-semibold text-sm mt-1">1,000 Credits</p>
+                        <ul class="text-xs text-slate-300 space-y-2.5 mt-4">
+                            <li>✔ Verified Business Leads & Emails</li>
+                            <li>✔ Excel & Google Sheets Download</li>
+                            <li>✔ 1-Click Direct Email Outreach</li>
+                            <li>✔ Credits Never Expire</li>
+                        </ul>
+                    </div>
+                    <button onclick="selectPackage('Pro Agency Package ($100 - 1,000 Credits)')" class="mt-6 w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-lg text-sm transition">
+                        Select Package
+                    </button>
+                </div>
+            </div>
+
+            <!-- Direct Contact Options -->
+            <div class="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 text-center">
+                <p id="selectedPkgLabel" class="text-sm font-semibold text-emerald-400 mb-1">Contact Us Directly to Activate Any Package</p>
+                <p class="text-xs text-slate-400 mb-4">Message us on WhatsApp, Email, or Facebook with your registered email for instant credit activation:</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-3">
+                    <a id="waContactBtn" href="#" target="_blank" class="bg-green-600 hover:bg-green-500 text-white font-semibold px-5 py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 transition">
+                        💬 WhatsApp Support
+                    </a>
+                    <a id="emailContactBtn" href="#" target="_blank" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 transition">
+                        ✉️ Email Support
+                    </a>
+                    <a id="fbContactBtn" href="#" target="_blank" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 transition">
+                        📘 Facebook Page
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== EMAIL TEMPLATE MODAL ==================== -->
+    <div id="emailModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold">Cold Email Template</h3>
+                <button onclick="closeModal('emailModal')" title="Close without saving" class="text-slate-400 hover:text-white text-lg font-bold px-2">✕</button>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Use <code class="text-emerald-400">{company}</code> to auto-fill business name.</p>
+            <input id="emailSubject" type="text" value="Priority Service & Maintenance Partner for {company}" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm mt-4 focus:border-emerald-500 focus:outline-none">
+            <textarea id="emailBody" rows="5" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm mt-3 focus:border-emerald-500 focus:outline-none">Hi {company} Team,
+
+We are a licensed local service provider offering same-day priority repairs and reliable maintenance contracts for property managers and commercial buildings in your area.
+
+Can I send over our rate card for upcoming projects?</textarea>
+            <div class="mt-4 flex justify-end gap-3">
+                <button onclick="closeModal('emailModal')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
+                <button onclick="saveEmailTemplate()" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-sm">Save Template</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== SUPABASE CONFIGURATION ====================
+        const SUPABASE_URL = "https://yeidapjzwryprqeflylw.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InllaWRhcGp6d3J5cHJxZWZseWx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3MDY2MjQsImV4cCI6MjExMTI4MjYyNH0._MO76UnVAHgtlKWrEIEZUAtYES0u2qsy1MI15M72hLU";
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ==================== APNE ASLI CONTACT LINKS YAHAN DAALEIN ====================
+        const MY_WHATSAPP = "https://wa.link/2ea54y";
+        const MY_EMAIL = "nexadigitalmarketingagency2@gmail.com";
+        const MY_FACEBOOK = "https://www.facebook.com/share/14zKNNC9Cba/";
+        // ================================================================================
+
+        let isSignupMode = false;
+        let currentUser = null;
+        let queryHistory = {};
+        let leadsData = [];
+
+        let savedSubject = "Priority Service & Maintenance Partner for {company}";
+        let savedBody = `Hi {company} Team,\n\nWe are a licensed local service provider offering same-day priority repairs and reliable maintenance contracts for property managers and commercial buildings in your area.\n\nCan I send over our rate card for upcoming projects?`;
+
+        function toggleMobileMenu() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('mobileBackdrop').classList.toggle('hidden');
+        }
+        function closeMobileMenu() {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('mobileBackdrop').classList.add('hidden');
+        }
+
+        async function initAccount() {
+            const savedEmail = localStorage.getItem('llp_active_user');
+
+            if (savedEmail) {
+                const { data, error } = await db.from('app_users').select('*').eq('email', savedEmail).single();
+                if (data && !error) {
+                    currentUser = { ...data, isGuest: false };
+                    updateAccountUI();
+                    updateContactLinks("Growth Package ($80 - 700 Credits)");
+                    renderTable();
+                    return;
+                } else {
+                    localStorage.removeItem('llp_active_user');
+                }
+            }
+
+            let guestData = JSON.parse(localStorage.getItem('llp_guest_trial_v2') || 'null');
+            if (!guestData) {
+                guestData = { email: "Guest Trial", plan: "FREE TRIAL", credits: 40, is_paid: false, isGuest: true };
+                localStorage.setItem('llp_guest_trial_v2', JSON.stringify(guestData));
+            }
+            currentUser = guestData;
+            updateAccountUI();
+            updateContactLinks("Growth Package ($80 - 700 Credits)");
+            renderTable();
+        }
+
+        function updateAccountUI() {
+            document.getElementById('creditsCount').innerText = currentUser.credits;
+            document.getElementById('planBadge').innerText = currentUser.plan;
+
+            if (currentUser.isGuest) {
+                document.getElementById('guestTopNav').classList.remove('hidden');
+                document.getElementById('loggedTopNav').classList.add('hidden');
+            } else {
+                document.getElementById('guestTopNav').classList.add('hidden');
+                document.getElementById('loggedTopNav').classList.remove('hidden');
+                document.getElementById('userEmailDisplay').innerText = currentUser.email;
+            }
+        }
+
+       function updateContactLinks(pkgName) {
+    const userEmailText = currentUser && !currentUser.isGuest ? currentUser.email : "(Not logged in yet)";
+    const message = encodeURIComponent(`Hello! I want to activate the ${pkgName}.\nMy Registered Email: ${userEmailText}`);
+    const subject = encodeURIComponent(`Activate ${pkgName}`);
+
+    document.getElementById('waContactBtn').href = `${MY_WHATSAPP}?text=${message}`;
+    document.getElementById('emailContactBtn').href = `https://mail.google.com/mail/?view=cm&fs=1&to=${MY_EMAIL}&su=${subject}&body=${message}`;
+    document.getElementById('fbContactBtn').href = MY_FACEBOOK;
+}
+
+        function selectPackage(pkgName) {
+            document.getElementById('selectedPkgLabel').innerText = `Selected: ${pkgName} — Click below to contact us:`;
+            updateContactLinks(pkgName);
+        }
+
+        function openAuthModal(mode = 'login') {
+            switchAuth(mode);
+            openModal('authModal');
+        }
+
+        function switchAuth(mode) {
+            isSignupMode = (mode === 'signup');
+            const errEl = document.getElementById('authError');
+            errEl.classList.add('hidden');
+            errEl.innerText = "";
+
+            document.getElementById('nameField').classList.toggle('hidden', !isSignupMode);
+            document.getElementById('confirmPassField').classList.toggle('hidden', !isSignupMode);
+            document.getElementById('authConfirmPassword').required = isSignupMode;
+
+            document.getElementById('authBtn').innerText = isSignupMode ? "Create Free Account" : "Login to Account";
+            document.getElementById('loginTab').className = !isSignupMode ? "w-1/2 py-2 rounded-md bg-emerald-500 text-slate-950 font-bold text-sm" : "w-1/2 py-2 rounded-md text-slate-400 font-medium text-sm";
+            document.getElementById('signupTab').className = isSignupMode ? "w-1/2 py-2 rounded-md bg-emerald-500 text-slate-950 font-bold text-sm" : "w-1/2 py-2 rounded-md text-slate-400 font-medium text-sm";
+        }
+
+        function showAuthError(msg) {
+            const errEl = document.getElementById('authError');
+            errEl.innerText = msg;
+            errEl.classList.remove('hidden');
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value.trim().toLowerCase();
+            const password = document.getElementById('authPassword').value;
+            const confirmPassword = document.getElementById('authConfirmPassword').value;
+            const fullName = document.getElementById('authName').value.trim();
+            const btn = document.getElementById('authBtn');
+
+            btn.disabled = true;
+            btn.innerText = "Please wait...";
+
+            try {
+                if (isSignupMode) {
+                    if (password.length < 6) {
+                        showAuthError("Password must be at least 6 characters long.");
+                        return;
+                    }
+                    if (password !== confirmPassword) {
+                        showAuthError("Passwords do not match! Please enter the same password twice.");
+                        return;
+                    }
+
+                    const { data: existing } = await db.from('app_users').select('email').eq('email', email).single();
+                    if (existing) {
+                        showAuthError("An account with this email already exists. Please login.");
+                        return;
+                    }
+
+                    const startingCredits = currentUser && currentUser.isGuest ? currentUser.credits : 40;
+                    const newUser = {
+                        full_name: fullName,
+                        email: email,
+                        password: password,
+                        plan: "FREE TRIAL",
+                        credits: startingCredits,
+                        is_paid: false
+                    };
+
+                    const { error } = await db.from('app_users').insert([newUser]);
+                    if (error) {
+                        showAuthError("Database error: " + error.message);
+                        return;
+                    }
+                    currentUser = { ...newUser, isGuest: false };
+                } else {
+                    const { data: user, error } = await db.from('app_users').select('*').eq('email', email).single();
+                    if (!user || error) {
+                        showAuthError("Account not found! Please click 'Sign Up' to create an account.");
+                        return;
+                    }
+                    if (user.password !== password) {
+                        showAuthError("Incorrect password! Please try again.");
+                        return;
+                    }
+                    currentUser = { ...user, isGuest: false };
+                }
+
+                localStorage.setItem('llp_active_user', email);
+                closeModal('authModal');
+                updateAccountUI();
+                updateContactLinks("Growth Package ($80 - 700 Credits)");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = isSignupMode ? "Create Free Account" : "Login to Account";
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('llp_active_user');
+            location.reload();
+        }
+
+        async function saveUser() {
+            if (currentUser.isGuest) {
+                localStorage.setItem('llp_guest_trial_v2', JSON.stringify(currentUser));
+            } else {
+                await db.from('app_users').update({
+                    credits: currentUser.credits,
+                    plan: currentUser.plan,
+                    is_paid: currentUser.is_paid
+                }).eq('email', currentUser.email);
+            }
+            updateAccountUI();
+        }
+
+        function updatePlaceholder() {
+            const reg = document.getElementById('region').value;
+            const loc = document.getElementById('location');
+            loc.value = "";
+            loc.placeholder = reg === 'UK' ? "e.g. London, UK or Manchester" : "e.g. Dallas, TX or 75201";
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById("leadsTable");
+            tbody.innerHTML = "";
+            let withEmail = 0;
+
+            if (leadsData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-8 sm:p-10 text-center text-slate-500 text-xs sm:text-sm">
+                            No leads searched yet. Select an industry, enter your target location above, and click <strong>Find Leads</strong> to start.
+                        </td>
+                    </tr>
+                `;
+                document.getElementById("totalBadge").innerText = "0 Total";
+                document.getElementById("emailBadge").innerText = "0 With Email";
+                return;
+            }
+
+            leadsData.forEach((lead, idx) => {
+                if (lead.email) withEmail++;
+                const emailCell = lead.email
+                    ? `<span class="text-emerald-400 font-medium">${lead.email}</span>`
+                    : `<span class="text-slate-500 text-xs">No public email</span>`;
+
+                const actionBtn = lead.email
+                    ? `<button onclick="sendGmail('${lead.email}', '${lead.name.replace(/'/g, "")}')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-md whitespace-nowrap">✉️ Send Email</button>`
+                    : `<a href="tel:${lead.phone}" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-md inline-block whitespace-nowrap">📞 Call</a>`;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-900/60">
+                        <td class="p-3 sm:p-4 text-slate-500">${idx + 1}</td>
+                        <td class="p-3 sm:p-4 font-medium">${lead.name}</td>
+                        <td class="p-3 sm:p-4 text-slate-300 whitespace-nowrap">${lead.phone || "-"}</td>
+                        <td class="p-3 sm:p-4">${emailCell}</td>
+                        <td class="p-3 sm:p-4 text-blue-400 underline text-xs whitespace-nowrap"><a href="${lead.website}" target="_blank">Open Site</a></td>
+                        <td class="p-3 sm:p-4">${actionBtn}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById("totalBadge").innerText = `${leadsData.length} Total`;
+            document.getElementById("emailBadge").innerText = `${withEmail} With Email`;
+        }
+
+        async function searchLeads(isNextBatch = false) {
+            const loc = document.getElementById("location").value.trim();
+            if (!loc) {
+                alert("Please enter a target city, state, or postcode first.");
+                document.getElementById("location").focus();
+                return;
+            }
+
+            if (currentUser.credits < 10) {
+                alert("Your trial credits are finished! Please select a package or sign up to continue.");
+                openModal('pricingModal');
+                return;
+            }
+
+            const cat = document.getElementById("category").value;
+            const fullQuery = `${cat} in ${loc}`;
+            let currentSkip = queryHistory[fullQuery] || 0;
+
+            document.getElementById("loadingBox").classList.remove("hidden");
+            document.getElementById("resultsBox").classList.add("hidden");
+
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/scrape?query=${encodeURIComponent(fullQuery)}&skip=${currentSkip}`);
+                const data = await res.json();
+
+                if (data.leads.length === 0) {
+                    alert("No more new leads found for this exact search! Try a nearby city or postcode.");
+                } else {
+                    leadsData = isNextBatch ? [...leadsData, ...data.leads] : data.leads;
+                    queryHistory[fullQuery] = data.next_skip;
+
+                    currentUser.credits -= 10;
+                    await saveUser();
+
+                    document.getElementById("resultsTitle").innerText = `Extracted Leads (${loc}) — ${leadsData.length} Businesses`;
+                    document.getElementById("loadMoreBox").classList.remove("hidden");
+                    renderTable();
+                }
+            } catch (err) {
+                alert("Backend server is not running! Start 'python -m uvicorn api:app --reload' in VS Code.");
+            } finally {
+                document.getElementById("loadingBox").classList.add("hidden");
+                document.getElementById("resultsBox").classList.remove("hidden");
+            }
+        }
+
+        async function exportToExcel() {
+            if (!currentUser.is_paid) {
+                alert("Please subscribe to a package first to download leads in Excel or Google Sheets.");
+                openModal('pricingModal');
+                return;
+            }
+
+            if (leadsData.length === 0) {
+                alert("No leads available to download. Run a search first!");
+                return;
+            }
+
+            if (currentUser.credits < 5) {
+                alert("Insufficient credits! Please select a package to top up your credits.");
+                openModal('pricingModal');
+                return;
+            }
+
+            currentUser.credits -= 5;
+            await saveUser();
+
+            const formattedRows = leadsData.map((item, index) => ({
+                "Sr #": index + 1,
+                "Business Name": item.name,
+                "Phone Number": item.phone || "N/A",
+                "Verified Email": item.email || "Not Listed",
+                "Website URL": item.website || "N/A",
+                "Location": document.getElementById("location").value
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(formattedRows);
+            worksheet["!cols"] = [
+                { wch: 6 }, { wch: 35 }, { wch: 20 }, { wch: 32 }, { wch: 35 }, { wch: 18 }
+            ];
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Verified_Leads");
+            XLSX.writeFile(workbook, `Leads_${document.getElementById("location").value.replace(/[^a-zA-Z0-9]/g, "_")}.xlsx`);
+        }
+
+        function saveEmailTemplate() {
+            savedSubject = document.getElementById("emailSubject").value;
+            savedBody = document.getElementById("emailBody").value;
+            closeModal('emailModal');
+        }
+
+        function sendGmail(email, companyName) {
+            const subject = encodeURIComponent(savedSubject.replace(/{company}/g, companyName));
+            const body = encodeURIComponent(savedBody.replace(/{company}/g, companyName));
+            window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${subject}&body=${body}`, "_blank");
+        }
+
+        function openModal(id) {
+            if (id === 'emailModal') {
+                document.getElementById("emailSubject").value = savedSubject;
+                document.getElementById("emailBody").value = savedBody;
+            }
+            document.getElementById(id).classList.remove("hidden");
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add("hidden");
+        }
+
+        window.onload = initAccount;
+    </script>
+</body>
+</html>
