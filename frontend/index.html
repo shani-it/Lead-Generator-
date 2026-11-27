@@ -636,9 +636,9 @@ Can I send over our rate card for upcoming projects?</textarea>
                     document.getElementById("loadMoreBox").classList.remove("hidden");
                     renderTable();
                 }
-            } catch (err) {
-                alert("Backend server is not running! Start 'python -m uvicorn api:app --reload' in VS Code.");
-            } finally {
+            }} catch (err) {
+    alert("Server is bussy. Please wait 30 seconds and click Search again!");
+}
                 document.getElementById("loadingBox").classList.add("hidden");
                 document.getElementById("resultsBox").classList.remove("hidden");
             }
