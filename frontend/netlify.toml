@@ -1,4 +1,7 @@
 # The site's base directory is `frontend`, so all paths here are relative to it.
-# The site is plain static HTML — no build step is needed.
+# The site is plain static HTML with no build step; the files live in `public/`.
+# Publishing a dedicated subfolder (rather than ".") keeps the deploy directory
+# unambiguous, so it can't be combined with a dashboard value into a bad path
+# such as `frontend/frontend`.
 [build]
-  publish = "."
+  publish = "public"
