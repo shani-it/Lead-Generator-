@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LocalLeadPro - B2B Lead Engine & Outreach</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans antialiased">
@@ -634,11 +634,11 @@ Can I send over our rate card for upcoming projects?</textarea>
 
                     document.getElementById("resultsTitle").innerText = `Extracted Leads (${loc}) — ${leadsData.length} Businesses`;
                     document.getElementById("loadMoreBox").classList.remove("hidden");
-                    renderTable();
+                   renderTable();
                 }
-            }} catch (err) {
-    alert("Server is bussy. Please wait 30 seconds and click Search again!");
-}
+            } catch (err) {
+                alert("Server is busy or waking up. Please wait 30 seconds and click Search again!");
+            } finally {
                 document.getElementById("loadingBox").classList.add("hidden");
                 document.getElementById("resultsBox").classList.remove("hidden");
             }
