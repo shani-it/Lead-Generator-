@@ -636,9 +636,10 @@ Can I send over our rate card for upcoming projects?</textarea>
                     document.getElementById("loadMoreBox").classList.remove("hidden");
                    renderTable();
                 }
-            } catch (err) {
-                alert("Server is busy or waking up. Please wait 30 seconds and click Search again!");
-            } finally {
+            }  catch (err) {
+    console.error("Search API Error:", err);
+    alert("Error: " + err.message);
+} finally {
                 document.getElementById("loadingBox").classList.add("hidden");
                 document.getElementById("resultsBox").classList.remove("hidden");
             }

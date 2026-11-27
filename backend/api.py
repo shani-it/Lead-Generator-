@@ -7,6 +7,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from playwright.sync_api import sync_playwright
 
 app = FastAPI()
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Is ke neeche aapke purane @app.get("/") aur @app.get("/scrape") wale routes rahenge
 
 app.add_middleware(
     CORSMiddleware,
