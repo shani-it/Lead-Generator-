@@ -5,10 +5,7 @@ from urllib.parse import urljoin
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from playwright.sync_api import sync_playwright
-
-app = FastAPI()
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 
 app = FastAPI()
 
@@ -16,15 +13,6 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Is ke neeche aapke purane @app.get("/") aur @app.get("/scrape") wale routes rahenge
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -72,18 +60,29 @@ def scrape_leads(search_query, skip=0, limit=20):
     seen_names = set()
 
     with sync_playwright() as p:
-        # Render Free Tier (512MB RAM) crash prevention flags
+        # AWS Lambda & low-memory container flags
         browser = p.chromium.launch(
             headless=True,
             args=[
                 "--no-sandbox",
+                "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--single-process"
+                "--single-process",
+                "--no-zygote"
             ]
         )
         try:
             page = browser.new_page()
+
+            # Images aur media block karein taake scraping fast ho aur RAM kam lage
+            page.route(
+                "**/*",
+                lambda route: route.abort()
+                if route.request.resource_type in ["image", "font", "media"]
+                else route.continue_()
+            )
+
             page.goto(f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}")
             page.wait_for_selector('div[role="feed"]', timeout=15000)
 
@@ -139,3 +138,6 @@ def health_check():
 def get_leads(query: str, skip: int = 0):
     results = scrape_leads(query, skip=skip, limit=20)
     return {"leads": results, "next_skip": skip + len(results)}
+
+# AWS Lambda entry point
+handler = Mangum(app)
