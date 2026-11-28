@@ -1,6 +1,7 @@
 import re
 import time
 import requests
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urljoin
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,15 +39,15 @@ def find_emails_in_html(html_text):
 def extract_email_from_website(url):
     if not url:
         return ""
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     try:
-        res = requests.get(url, headers=headers, timeout=5)
+        res = requests.get(url, headers=headers, timeout=3)
         emails = find_emails_in_html(res.text)
         if emails:
             return emails[0]
 
-        for path in ["/contact", "/contact-us", "/about"]:
-            c_res = requests.get(urljoin(url, path), headers=headers, timeout=4)
+        for path in ["/contact", "/contact-us"]:
+            c_res = requests.get(urljoin(url, path), headers=headers, timeout=2.5)
             if c_res.status_code == 200:
                 c_emails = find_emails_in_html(c_res.text)
                 if c_emails:
@@ -56,11 +57,11 @@ def extract_email_from_website(url):
     return ""
 
 def scrape_leads(search_query, skip=0, limit=20):
+    start_time = time.time()
     leads = []
     seen_names = set()
 
     with sync_playwright() as p:
-        # AWS Lambda & low-memory container flags
         browser = p.chromium.launch(
             headless=True,
             args=[
@@ -68,65 +69,89 @@ def scrape_leads(search_query, skip=0, limit=20):
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--single-process",
-                "--no-zygote"
+                "--no-zygote",
+                "--disable-extensions"
             ]
         )
         try:
-            page = browser.new_page()
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                locale="en-US"
+            )
+            page = context.new_page()
+            page.set_default_timeout(10000)
 
-            # Images aur media block karein taake scraping fast ho aur RAM kam lage
             page.route(
                 "**/*",
                 lambda route: route.abort()
-                if route.request.resource_type in ["image", "font", "media"]
+                if route.request.resource_type in ["image", "font", "media", "stylesheet"]
                 else route.continue_()
             )
 
-            page.goto(f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}")
+            page.goto(
+                f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}?hl=en",
+                wait_until="domcontentloaded",
+                timeout=20000
+            )
+
+            # Agar Google consent page aaye to accept karein
+            try:
+                consent_btn = page.locator('button:has-text("Accept all"), button:has-text("I agree")').first
+                if consent_btn.is_visible(timeout=2000):
+                    consent_btn.click()
+                    time.sleep(1)
+            except Exception:
+                pass
+
             page.wait_for_selector('div[role="feed"]', timeout=15000)
 
-            # Jitne zyada skip karne hain, utna zyada scroll karein
-            scroll_times = 4 + (skip // 10) * 2
+            scroll_times = 3 + (skip // 10) * 2
             feed = page.locator('div[role="feed"]')
             for _ in range(scroll_times):
-                feed.evaluate("el => el.scrollTop += 1500")
-                time.sleep(1.5)
+                feed.evaluate("el => el.scrollTop += 2000")
+                time.sleep(1.0)
 
             listings = page.locator('a[href*="/maps/place/"]').all()
             all_urls = list(dict.fromkeys([l.get_attribute("href") for l in listings if l.get_attribute("href")]))
-            
-            # Purane results ko skip karke agla fresh batch uthana
             target_urls = all_urls[skip : skip + limit]
 
             for url in target_urls:
+                # 110 second se zyada ho jaye to loop rok dein taake Lambda kabhi timeout na kare
+                if time.time() - start_time > 110:
+                    break
                 try:
-                    page.goto(url)
-                    time.sleep(1.2)
+                    page.goto(url, wait_until="domcontentloaded", timeout=8000)
+                    page.wait_for_selector("h1", timeout=4000)
 
-                    name = page.locator("h1").inner_text().strip() if page.locator("h1").count() > 0 else "N/A"
-                    if name in seen_names or name == "N/A":
+                    name = page.locator("h1").first.inner_text().strip()
+                    if not name or name in seen_names or name == "Results":
                         continue
                     seen_names.add(name)
 
                     phone_loc = page.locator('button[data-item-id^="phone:tel:"]')
-                    phone = phone_loc.get_attribute("aria-label").replace("Phone:", "").strip() if phone_loc.count() > 0 else ""
+                    phone = phone_loc.first.get_attribute("aria-label").replace("Phone:", "").strip() if phone_loc.count() > 0 else ""
 
                     web_loc = page.locator('a[data-item-id="authority"]')
-                    website = web_loc.get_attribute("href") if web_loc.count() > 0 else ""
-
-                    email = extract_email_from_website(website)
+                    website = web_loc.first.get_attribute("href") if web_loc.count() > 0 else ""
 
                     leads.append({
                         "name": name,
                         "phone": phone,
                         "website": website,
-                        "email": email
+                        "email": ""
                     })
                 except Exception:
                     continue
         finally:
             browser.close()
+
+    # Saari websites se emails ek hi waqt (parallel) mein nikalein
+    if leads:
+        websites = [lead["website"] for lead in leads]
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            emails = list(executor.map(extract_email_from_website, websites))
+        for lead, email in zip(leads, emails):
+            lead["email"] = email
 
     return leads
 
@@ -139,5 +164,4 @@ def get_leads(query: str, skip: int = 0):
     results = scrape_leads(query, skip=skip, limit=20)
     return {"leads": results, "next_skip": skip + len(results)}
 
-# AWS Lambda entry point
 handler = Mangum(app)
